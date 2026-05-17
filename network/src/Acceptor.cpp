@@ -5,7 +5,8 @@
 Acceptor::Acceptor(EventLoop* loop, int port)
     : loop_(loop),
       listenSocket_(),
-      acceptChannel_(loop_, -1) {
+      acceptChannel_(loop_, -1),
+      started_(false) {
 
     if (listenSocket_.fd() < 0) return;
 
@@ -19,6 +20,7 @@ Acceptor::Acceptor(EventLoop* loop, int port)
     acceptChannel_ = Channel(loop_, listenSocket_.fd());
     acceptChannel_.setReadCallback([this] { onAccept(); });
     acceptChannel_.enableReading();
+    started_ = true;
 }
 
 Acceptor::~Acceptor() {

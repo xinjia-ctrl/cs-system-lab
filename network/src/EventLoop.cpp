@@ -7,7 +7,6 @@ EventLoop::EventLoop()
     : quit_(false),
       wakeupFd_(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)),
       wakeupChannel_(this, wakeupFd_),
-      callingPendingFunctors_(false),
       threadId_(std::this_thread::get_id()) {
 
     if (wakeupFd_ < 0) {
@@ -90,8 +89,6 @@ void EventLoop::handleWakeup() {
 
 void EventLoop::doPendingFunctors() {
     std::vector<Functor> functors;
-    callingPendingFunctors_ = true;
-
     {
         std::lock_guard<std::mutex> lock(mutex_);
         functors.swap(pendingFunctors_);
@@ -100,6 +97,4 @@ void EventLoop::doPendingFunctors() {
     for (auto& f : functors) {
         f();
     }
-
-    callingPendingFunctors_ = false;
 }

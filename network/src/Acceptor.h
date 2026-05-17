@@ -14,6 +14,8 @@ public:
     Acceptor(EventLoop* loop, int port);
     ~Acceptor();
 
+    bool isRunning() const { return started_; }
+
     void setNewConnectionCallback(const NewConnectionCallback& cb) {
         newConnCallback_ = cb;
     }
@@ -25,6 +27,7 @@ private:
     Socket listenSocket_;
     Channel acceptChannel_;
     NewConnectionCallback newConnCallback_;
+    bool started_;
 };
 
 #endif // ACCEPTOR_H

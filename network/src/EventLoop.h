@@ -6,7 +6,6 @@
 
 #include <vector>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <thread>
 
@@ -40,7 +39,6 @@ private:
     Channel wakeupChannel_;
     std::mutex mutex_;
     std::vector<Functor> pendingFunctors_;
-    bool callingPendingFunctors_;
 
     std::thread::id threadId_;
 };

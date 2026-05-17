@@ -31,10 +31,15 @@ public:
             });
     }
 
-    void start() {
+    bool start() {
+        if (!acceptor_.isRunning()) {
+            fprintf(stderr, "Acceptor failed to start\n");
+            return false;
+        }
         threadPool_.start();
         printf("Stage 3 — Reactor server (1 main + %zu sub reactors)\n",
                threadPool_.getThreadCount());
+        return true;
     }
 
     void run() {
@@ -112,7 +117,9 @@ private:
 
 int main() {
     ReactorServer server(4);
-    server.start();
+    if (!server.start()) {
+        return 1;
+    }
     server.run();
     return 0;
 }

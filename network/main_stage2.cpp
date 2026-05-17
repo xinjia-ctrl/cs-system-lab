@@ -48,7 +48,6 @@ public:
 
 private:
     void onAccept() {
-        Socket tmpSocket; // used to hold client addr
         while (true) {
             struct sockaddr_in client_addr;
             int conn_fd = listenSocket_.accept(&client_addr);
@@ -84,19 +83,20 @@ private:
             printf("fd=%d received %d bytes\n", fd, n);
             write(fd, RESPONSE, strlen(RESPONSE));
         }
+
         // Close after one request-response
-        ::close(fd);
-        ch->disableAll();
+        ch->disableAll();  // Remove from epoll first
         clients_.erase(fd);
+        ::close(fd);
         printf("fd=%d closed\n", fd);
     }
 
     void onClose(Channel* ch) {
         int fd = ch->fd();
         printf("fd=%d disconnected\n", fd);
-        ::close(fd);
         ch->disableAll();
         clients_.erase(fd);
+        ::close(fd);
     }
 
     EventLoop loop_;
