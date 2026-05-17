@@ -14,3 +14,16 @@ add_executable(stage2_epoll
     src/Channel.cpp
     src/EventLoop.cpp
 )
+
+# Stage 3: 主从 Reactor 模型（One Loop Per Thread）
+add_executable(stage3_reactor
+    main_stage3.cpp
+    src/Socket.cpp
+    src/Epoll.cpp
+    src/Channel.cpp
+    src/EventLoop.cpp
+    src/Acceptor.cpp
+    src/EventLoopThread.cpp
+    src/EventLoopThreadPool.cpp
+)
+target_link_libraries(stage3_reactor pthread)

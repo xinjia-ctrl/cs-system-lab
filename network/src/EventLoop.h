@@ -2,23 +2,47 @@
 #define EVENTLOOP_H
 
 #include "Epoll.h"
-#include <vector>
+#include "Channel.h"
 
-class Channel;
+#include <vector>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <thread>
 
 class EventLoop {
 public:
+    using Functor = std::function<void()>;
+
     EventLoop();
-    ~EventLoop() = default;
+    ~EventLoop();
 
     void loop();
-    void quit() { quit_ = true; }
+    void quit();
 
     void updateChannel(Channel* channel);
 
+    void runInLoop(const Functor& cb);
+    void queueInLoop(const Functor& cb);
+
+    bool isInLoopThread() const { return threadId_ == std::this_thread::get_id(); }
+
 private:
+    void wakeup();
+    void handleWakeup();
+    void doPendingFunctors();
+
     Epoll epoll_;
     bool quit_;
+
+    // Cross-thread wakeup
+    int wakeupFd_;
+    Channel wakeupChannel_;
+    std::mutex mutex_;
+    std::vector<Functor> pendingFunctors_;
+    bool callingPendingFunctors_;
+
+    std::thread::id threadId_;
 };
 
 #endif // EVENTLOOP_H
