@@ -27,3 +27,19 @@ add_executable(stage3_reactor
     src/EventLoopThreadPool.cpp
 )
 target_link_libraries(stage3_reactor pthread)
+
+# Stage 4: HTTP 协议解析 + Reactor HTTP 服务器
+add_executable(stage4_http
+    main_stage4.cpp
+    src/Socket.cpp
+    src/Epoll.cpp
+    src/Channel.cpp
+    src/EventLoop.cpp
+    src/Acceptor.cpp
+    src/EventLoopThread.cpp
+    src/EventLoopThreadPool.cpp
+    src/HttpRequest.cpp
+    src/HttpResponse.cpp
+    src/HttpServer.cpp
+)
+target_link_libraries(stage4_http pthread)
