@@ -11,8 +11,9 @@
 
 #include <functional>
 #include <memory>
-#include <unordered_map>
 #include <mutex>
+#include <unordered_map>
+#include <string>
 
 class HttpServer {
 public:
@@ -27,22 +28,33 @@ public:
     void run();
 
 private:
+    // 每个连接持有一个 Channel + HTTP 解析上下文 + 响应写缓冲
     struct Connection {
         Channel* channel;
         HttpContext context;
+        std::string writeBuf;   // 待发送的响应数据缓存
+        size_t writeSent;       // 已发送的字节数
+
+        Connection(EventLoop* loop, int fd)
+            : channel(nullptr), writeSent(0) {
+            channel = new Channel(loop, fd);
+        }
+        ~Connection() { delete channel; }
     };
 
     void onNewConnection(int conn_fd, struct sockaddr_in addr);
-    void onRead(Channel* ch);
-    void onClose(Channel* ch);
-    void removeConnection(Channel* ch);
+    void onRead(Connection* conn);
+    void onWrite(Connection* conn);
+    void onClose(Connection* conn);
+    void sendResponse(Connection* conn, HttpResponse& resp);
+    void removeConnection(Connection* conn);
 
     EventLoop mainLoop_;
     Acceptor acceptor_;
     EventLoopThreadPool threadPool_;
     HttpCallback callback_;
 
-    std::mutex mutex_;
+    std::mutex connectionsMutex_;
     std::unordered_map<int, Connection*> connections_;
 };
 

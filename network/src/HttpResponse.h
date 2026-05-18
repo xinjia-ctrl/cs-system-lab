@@ -12,6 +12,7 @@ public:
     void setStatusMessage(const std::string& msg);
     void setContentType(const std::string& type);
     void setBody(const std::string& body);
+    bool keepAlive() const { return keepAlive_; }
     void setKeepAlive(bool on);
     void setHeader(const std::string& key, const std::string& value);
 
