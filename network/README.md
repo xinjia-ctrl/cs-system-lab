@@ -8,10 +8,11 @@
 
 ## 功能特性
 
-- 基于 epoll 的非阻塞 I/O 多路复用（Edge/LT 触发）
+- 基于 epoll 的水平触发非阻塞 I/O 多路复用
 - 主从 Reactor 模型：1 个主 Reactor 负责 accept + N 个子 Reactor 负责 I/O 读写
 - HTTP/1.1 有限状态机解析器（请求行 → 请求头 → 请求体）
 - 支持 Connection: keep-alive 长连接
+- 非阻塞写缓冲，EPOLLOUT 驱动剩余数据发送
 - C++11 实现，零三方依赖
 
 ## 四阶段演进
@@ -144,7 +145,6 @@ network/
 │   ├── EventLoopThreadPool.h/.cpp  # Reactor 线程池
 │   ├── HttpRequest.h/.cpp  # HTTP 请求解析（状态机）
 │   ├── HttpResponse.h/.cpp # HTTP 响应构建
-│   ├── HttpContext.h       # 连接级解析状态
 │   └── HttpServer.h/.cpp   # HTTP + Reactor 整合
 ├── benchmark/
 │   └── run.sh              # 一键压测脚本
