@@ -1,6 +1,9 @@
 #include "Socket.h"
 #include <fcntl.h>
 #include <cerrno>
+#include <cstring>
+#include <cstdio>
+#include <arpa/inet.h>
 
 Socket::Socket() : fd_(-1), owned_(true) {
     fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -88,9 +91,3 @@ int Socket::release() {
     return fd_;
 }
 
-void Socket::close() {
-    if (owned_ && fd_ >= 0) {
-        ::close(fd_);
-        fd_ = -1;
-    }
-}

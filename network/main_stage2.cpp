@@ -6,6 +6,7 @@
 #include <cstring>
 #include <memory>
 #include <unordered_map>
+#include <arpa/inet.h>
 
 const int PORT = 8080;
 const char* RESPONSE =
@@ -82,10 +83,22 @@ private:
             buf[n] = '\0';
             printf("fd=%d received %d bytes\n", fd, n);
             write(fd, RESPONSE, strlen(RESPONSE));
+        } else if (n == 0) {
+            printf("fd=%d closed by peer\n", fd);
+            ch->disableAll();
+            clients_.erase(fd);
+            ::close(fd);
+            return;
+        } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+            ch->disableAll();
+            clients_.erase(fd);
+            ::close(fd);
+            return;
         }
 
         // Close after one request-response
-        ch->disableAll();  // Remove from epoll first
+        ch->disableAll();
         clients_.erase(fd);
         ::close(fd);
         printf("fd=%d closed\n", fd);

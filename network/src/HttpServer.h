@@ -6,11 +6,10 @@
 #include "EventLoopThreadPool.h"
 #include "Channel.h"
 #include "Socket.h"
-#include "HttpContext.h"
+#include "HttpRequest.h"
 #include "HttpResponse.h"
 
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <unordered_map>
 #include <string>
@@ -31,7 +30,7 @@ private:
     // 每个连接持有一个 Channel + HTTP 解析上下文 + 响应写缓冲
     struct Connection {
         Channel* channel;
-        HttpContext context;
+        HttpRequest request;
         std::string writeBuf;   // 待发送的响应数据缓存
         size_t writeSent;       // 已发送的字节数
 
@@ -46,7 +45,7 @@ private:
     void onRead(Connection* conn);
     void onWrite(Connection* conn);
     void onClose(Connection* conn);
-    void sendResponse(Connection* conn, HttpResponse& resp);
+    void sendResponse(Connection* conn, const HttpResponse& resp);
     void removeConnection(Connection* conn);
 
     EventLoop mainLoop_;

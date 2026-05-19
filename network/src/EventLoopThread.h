@@ -20,7 +20,6 @@ private:
     std::thread thread_;
     std::mutex mutex_;
     std::condition_variable cond_;
-    bool exiting_;
 };
 
 #endif // EVENTLOOPTHREAD_H

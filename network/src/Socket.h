@@ -2,10 +2,7 @@
 #define SOCKET_H
 
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
-#include <cstring>
-#include <cstdio>
 
 class Socket {
 public:
@@ -28,7 +25,6 @@ public:
 
     // Release ownership of fd without closing it
     int release();
-    void close();
 
 private:
     int fd_;

@@ -2,10 +2,9 @@
 #include "EventLoop.h"
 
 EventLoopThread::EventLoopThread()
-    : loop_(nullptr), exiting_(false) {}
+    : loop_(nullptr) {}
 
 EventLoopThread::~EventLoopThread() {
-    exiting_ = true;
     if (loop_) {
         loop_->quit();
     }

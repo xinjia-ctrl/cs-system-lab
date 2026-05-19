@@ -63,7 +63,7 @@ bool HttpRequest::parse(const char* data, size_t len) {
             break;
         }
         case kExpectBody: {
-            if (buf_.size() >= static_cast<size_t>(contentLength_)) {
+            if (buf_.size() >= contentLength_) {
                 body_ = buf_.substr(0, contentLength_);
                 buf_.erase(0, contentLength_);
                 state_ = kGotAll;

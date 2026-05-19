@@ -13,6 +13,7 @@ public:
     ~EventLoopThreadPool();
 
     void start();
+    // 仅被主 Reactor 线程调用（Acceptor 回调中），无需同步
     EventLoop* getNextLoop();
     size_t getThreadCount() const { return loops_.size(); }
 

@@ -38,7 +38,7 @@ private:
     std::string version_;
     std::unordered_map<std::string, std::string> headers_;
     std::string body_;
-    int contentLength_;
+    size_t contentLength_;
 };
 
 #endif // HTTPREQUEST_H

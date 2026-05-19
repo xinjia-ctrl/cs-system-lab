@@ -77,7 +77,7 @@ void HttpServer::onRead(Connection* conn) {
     }
 
     // 增量解析 HTTP 请求
-    if (!conn->context.parse(buf, static_cast<size_t>(n))) {
+    if (!conn->request.parse(buf, static_cast<size_t>(n))) {
         // 解析失败 → 400 Bad Request
         HttpResponse resp;
         resp.setStatusCode(400);
@@ -86,18 +86,18 @@ void HttpServer::onRead(Connection* conn) {
         return;
     }
 
-    if (!conn->context.gotAll()) {
+    if (!conn->request.gotAll()) {
         return;  // 半包，等更多数据
     }
 
     // 完整请求 → 回调生成响应
     HttpResponse resp;
     if (callback_) {
-        callback_(conn->context.request(), &resp);
+        callback_(conn->request, &resp);
     } else {
         resp.setBody("OK\n");
     }
-    resp.setKeepAlive(conn->context.request().keepAlive());
+    resp.setKeepAlive(conn->request.keepAlive());
 
     sendResponse(conn, resp);
 }
@@ -130,8 +130,8 @@ void HttpServer::onWrite(Connection* conn) {
     conn->channel->disableWriting();
 
     // keep-alive 则继续读下个请求，否则关闭
-    if (conn->context.request().keepAlive()) {
-        conn->context.reset();
+    if (conn->request.keepAlive()) {
+        conn->request.reset();
         // EPOLLIN 一直开启，下一个请求到来时会进入 onRead
     } else {
         removeConnection(conn);
@@ -144,7 +144,7 @@ void HttpServer::onClose(Connection* conn) {
 }
 
 // 构建并发送 HTTP 响应（可能一次写不完，剩余部分靠 EPOLLOUT 继续）
-void HttpServer::sendResponse(Connection* conn, HttpResponse& resp) {
+void HttpServer::sendResponse(Connection* conn, const HttpResponse& resp) {
     std::string msg = resp.toMessage();
     int fd = conn->channel->fd();
 
@@ -168,7 +168,7 @@ void HttpServer::sendResponse(Connection* conn, HttpResponse& resp) {
     } else {
         // 一次发完
         if (resp.keepAlive()) {
-            conn->context.reset();
+            conn->request.reset();
         } else {
             removeConnection(conn);
         }
