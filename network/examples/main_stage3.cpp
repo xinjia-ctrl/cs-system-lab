@@ -1,12 +1,15 @@
-#include "src/EventLoop.h"
-#include "src/Acceptor.h"
-#include "src/EventLoopThreadPool.h"
-#include "src/Channel.h"
-#include "src/Socket.h"
+#include "EventLoop.h"
+#include "Acceptor.h"
+#include "EventLoopThreadPool.h"
+#include "Channel.h"
+#include "Socket.h"
 
 #include <cstdio>
+#include <cerrno>
 #include <cstring>
+#include <memory>
 #include <unordered_map>
+#include <utility>
 #include <arpa/inet.h>
 
 const int PORT = 8080;
@@ -59,13 +62,15 @@ private:
         // Dispatch to a sub-reactor
         EventLoop* subLoop = threadPool_.getNextLoop();
         subLoop->runInLoop([conn_fd, subLoop, this] {
-            auto ch = new Channel(subLoop, conn_fd);
+            std::unique_ptr<Channel> channel(new Channel(subLoop, conn_fd));
+            Channel* ch = channel.get();
+
             ch->setReadCallback([ch, this] { onRead(ch); });
             ch->setCloseCallback([ch, this] { onClose(ch); });
             ch->enableReading();
 
             std::lock_guard<std::mutex> lock(mutex_);
-            clients_[conn_fd] = ch;
+            clients_[conn_fd] = std::move(channel);
         });
     }
 
@@ -81,6 +86,11 @@ private:
             write(fd, RESPONSE, strlen(RESPONSE));
         } else if (n == 0) {
             // Peer closed
+            removeConnection(ch);
+            return;
+        } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return;
+        } else {
             removeConnection(ch);
             return;
         }
@@ -103,7 +113,6 @@ private:
             clients_.erase(fd);
         }
         ::close(fd);
-        delete ch;
         printf("fd=%d closed\n", fd);
     }
 
@@ -112,7 +121,7 @@ private:
     EventLoopThreadPool threadPool_;
 
     std::mutex mutex_;
-    std::unordered_map<int, Channel*> clients_;
+    std::unordered_map<int, std::unique_ptr<Channel>> clients_;
 };
 
 int main() {

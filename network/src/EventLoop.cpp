@@ -2,6 +2,7 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include <cstdio>
+#include <cerrno>
 
 EventLoop::EventLoop()
     : quit_(false),
@@ -25,8 +26,8 @@ EventLoop::~EventLoop() {
 }
 
 void EventLoop::loop() {
-    quit_ = false;
-    while (!quit_) {
+    quit_.store(false);
+    while (!quit_.load()) {
         auto activeEvents = epoll_.wait();
 
         for (const auto& ev : activeEvents) {
@@ -40,7 +41,7 @@ void EventLoop::loop() {
 }
 
 void EventLoop::quit() {
-    quit_ = true;
+    quit_.store(true);
     wakeup();
 }
 
@@ -78,13 +79,25 @@ void EventLoop::queueInLoop(const Functor& cb) {
 }
 
 void EventLoop::wakeup() {
+    if (wakeupFd_ < 0) {
+        return;
+    }
     uint64_t one = 1;
-    write(wakeupFd_, &one, sizeof(one));
+    ssize_t n = write(wakeupFd_, &one, sizeof(one));
+    if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        perror("eventfd write");
+    }
 }
 
 void EventLoop::handleWakeup() {
+    if (wakeupFd_ < 0) {
+        return;
+    }
     uint64_t one;
-    read(wakeupFd_, &one, sizeof(one));
+    ssize_t n = read(wakeupFd_, &one, sizeof(one));
+    if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        perror("eventfd read");
+    }
 }
 
 void EventLoop::doPendingFunctors() {

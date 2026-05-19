@@ -18,9 +18,11 @@ void Channel::handleEvent() {
     }
     if ((revents_ & (EPOLLHUP | EPOLLRDHUP)) && closeCallback_) {
         closeCallback_();
+        return;
     }
     if ((revents_ & EPOLLERR) && errorCallback_) {
         errorCallback_();
+        return;
     }
 }
 

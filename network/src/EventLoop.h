@@ -8,6 +8,7 @@
 #include <functional>
 #include <mutex>
 #include <thread>
+#include <atomic>
 
 class EventLoop {
 public:
@@ -32,7 +33,7 @@ private:
     void doPendingFunctors();
 
     Epoll epoll_;
-    bool quit_;
+    std::atomic<bool> quit_;
 
     // Cross-thread wakeup
     int wakeupFd_;

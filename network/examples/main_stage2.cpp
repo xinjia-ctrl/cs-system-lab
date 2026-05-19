@@ -1,11 +1,12 @@
-#include "src/Socket.h"
-#include "src/EventLoop.h"
-#include "src/Channel.h"
+#include "Socket.h"
+#include "EventLoop.h"
+#include "Channel.h"
 
 #include <cstdio>
 #include <cstring>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 #include <arpa/inet.h>
 
 const int PORT = 8080;
@@ -65,13 +66,15 @@ private:
             conn_sock.setNonBlocking();
             conn_sock.release();
 
-            // Create Channel for this connection
-            auto ch = new Channel(&loop_, conn_fd);
+            // clients_ owns the Channel; callbacks use the raw pointer only
+            // while the channel is still registered in this EventLoop.
+            std::unique_ptr<Channel> channel(new Channel(&loop_, conn_fd));
+            Channel* ch = channel.get();
             ch->setReadCallback([this, ch] { onRead(ch); });
             ch->setCloseCallback([this, ch] { onClose(ch); });
             ch->enableReading();
 
-            clients_[conn_fd] = std::unique_ptr<Channel>(ch);
+            clients_[conn_fd] = std::move(channel);
         }
     }
 

@@ -1,36 +1,13 @@
-cmake_minimum_required(VERSION 2.8)
-project(epoll-http-server CXX)
+cmake_minimum_required(VERSION 3.10)
+project(epoll-http-server LANGUAGES CXX)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2")
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Stage 1: 单线程阻塞式 Socket 服务器（基准线）
-add_executable(stage1_blocking main_stage1.cpp)
+find_package(Threads REQUIRED)
 
-# Stage 2: epoll 单线程非阻塞 I/O 多路复用
-add_executable(stage2_epoll
-    main_stage2.cpp
-    src/Socket.cpp
-    src/Epoll.cpp
-    src/Channel.cpp
-    src/EventLoop.cpp
-)
-
-# Stage 3: 主从 Reactor 模型（One Loop Per Thread）
-add_executable(stage3_reactor
-    main_stage3.cpp
-    src/Socket.cpp
-    src/Epoll.cpp
-    src/Channel.cpp
-    src/EventLoop.cpp
-    src/Acceptor.cpp
-    src/EventLoopThread.cpp
-    src/EventLoopThreadPool.cpp
-)
-target_link_libraries(stage3_reactor pthread)
-
-# Stage 4: HTTP 协议解析 + Reactor HTTP 服务器
-add_executable(stage4_http
-    main_stage4.cpp
+add_library(network_core
     src/Socket.cpp
     src/Epoll.cpp
     src/Channel.cpp
@@ -42,4 +19,22 @@ add_executable(stage4_http
     src/HttpResponse.cpp
     src/HttpServer.cpp
 )
-target_link_libraries(stage4_http pthread)
+target_include_directories(network_core PUBLIC src)
+target_link_libraries(network_core PUBLIC Threads::Threads)
+
+function(add_stage name source)
+    add_executable(${name} ${source})
+    target_link_libraries(${name} PRIVATE network_core)
+endfunction()
+
+# Stage 1: 单线程阻塞式 Socket 服务器（基准线）
+add_executable(stage1_blocking examples/main_stage1.cpp)
+
+# Stage 2: epoll 单线程非阻塞 I/O 多路复用
+add_stage(stage2_epoll examples/main_stage2.cpp)
+
+# Stage 3: 主从 Reactor 模型（One Loop Per Thread）
+add_stage(stage3_reactor examples/main_stage3.cpp)
+
+# Stage 4: HTTP 协议解析 + Reactor HTTP 服务器
+add_stage(stage4_http examples/main_stage4.cpp)

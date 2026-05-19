@@ -1,6 +1,8 @@
 #include "HttpServer.h"
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <utility>
 #include <unistd.h>
 
 HttpServer::HttpServer(int port, int numThreads)
@@ -14,10 +16,8 @@ HttpServer::HttpServer(int port, int numThreads)
 }
 
 HttpServer::~HttpServer() {
-    // 清理所有残留连接（正常运行时不会走到这里）
-    for (auto& kv : connections_) {
-        delete kv.second;
-    }
+    // connections_ owns every Connection; clearing the map destroys them.
+    connections_.clear();
 }
 
 bool HttpServer::start() {
@@ -44,22 +44,23 @@ void HttpServer::onNewConnection(int conn_fd, struct sockaddr_in addr) {
     EventLoop* subLoop = threadPool_.getNextLoop();
     // 在子 Reactor 线程中创建连接对象
     subLoop->runInLoop([this, conn_fd, subLoop] {
-        auto conn = new Connection(subLoop, conn_fd);
-        conn->channel->setReadCallback([this, conn] {
-            onRead(conn);
+        std::unique_ptr<Connection> conn(new Connection(subLoop, conn_fd));
+        Connection* connPtr = conn.get();
+
+        conn->channel->setReadCallback([this, connPtr] {
+            onRead(connPtr);
         });
-        conn->channel->setWriteCallback([this, conn] {
-            onWrite(conn);
+        conn->channel->setWriteCallback([this, connPtr] {
+            onWrite(connPtr);
         });
-        conn->channel->setCloseCallback([this, conn] {
-            onClose(conn);
+        conn->channel->setCloseCallback([this, connPtr] {
+            onClose(connPtr);
         });
         conn->channel->enableReading();
 
-        // 连接已经在子 Reactor 线程中创建，无需额外加锁
         {
             std::lock_guard<std::mutex> lock(connectionsMutex_);
-            connections_[conn_fd] = conn;
+            connections_[conn_fd] = std::move(conn);
         }
     });
 }
@@ -177,12 +178,20 @@ void HttpServer::sendResponse(Connection* conn, const HttpResponse& resp) {
 
 // 清理连接
 void HttpServer::removeConnection(Connection* conn) {
+    if (conn->closing) {
+        return;
+    }
+    conn->closing = true;
+
     int fd = conn->channel->fd();
     conn->channel->disableAll();
-    {
+    ::close(fd);
+
+    // The current callback may still be running inside Channel::handleEvent().
+    // Erase later in the same EventLoop turn so the Channel object stays alive
+    // until event dispatch returns.
+    conn->loop->queueInLoop([this, fd] {
         std::lock_guard<std::mutex> lock(connectionsMutex_);
         connections_.erase(fd);
-    }
-    ::close(fd);
-    delete conn;
+    });
 }

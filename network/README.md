@@ -1,19 +1,31 @@
 # epoll HTTP Server
 
-从零实现的 C++ 高并发 HTTP 服务器，逐步演进了 4 种 I/O 模型：
+从零实现的 C++ 网络编程教学 demo，逐步演进了 4 种 I/O 模型：
 
 > 阻塞式 Socket → epoll 多路复用 → 主从 Reactor (One Loop Per Thread) → HTTP/1.1 状态机解析
 
-底层架构与 Nginx、Netty、muduo 同源。
+它的目标是帮助理解 epoll、Reactor、HTTP 解析和线程模型，而不是替代成熟的生产级 HTTP 框架。
 
 ## 功能特性
 
 - 基于 epoll 的水平触发非阻塞 I/O 多路复用
 - 主从 Reactor 模型：1 个主 Reactor 负责 accept + N 个子 Reactor 负责 I/O 读写
 - HTTP/1.1 有限状态机解析器（请求行 → 请求头 → 请求体）
-- 支持 Connection: keep-alive 长连接
+- 支持基础的 Connection: keep-alive 长连接（不支持 HTTP pipelining）
 - 非阻塞写缓冲，EPOLLOUT 驱动剩余数据发送
 - C++11 实现，零三方依赖
+
+## 代码组织
+
+项目按“核心组件 + 阶段示例”组织：
+
+| 目录 | 说明 |
+|---|---|
+| `src/` | 可复用的网络组件：Socket、Epoll、Channel、EventLoop、Acceptor、HTTP 解析与响应 |
+| `examples/` | 四个阶段的入口程序，只保留每个阶段新增的教学逻辑 |
+| `benchmark/` | 简单压测脚本 |
+
+构建时 `stage2` 到 `stage4` 共享同一个 `network_core` 静态库，避免每个阶段重复维护一份源码列表。
 
 ## 四阶段演进
 
@@ -85,23 +97,22 @@ kGotAll             →  解析完成，交给上层回调生成响应
 
 - Linux (epoll)
 - g++ 4.8+ (支持 C++11)
-- cmake 2.8+
+- cmake 3.10+
 - make
 
 ### 编译
 
 ```bash
 cd network
-mkdir build && cd build
-cmake ..
-make
+cmake -S . -B build
+cmake --build build
 ```
 
 ### 运行测试
 
 ```bash
 # 阶段 4（包含完整 HTTP 解析）
-./stage4_http &
+./build/stage4_http &
 
 # 测试
 curl http://localhost:8080/
@@ -139,10 +150,11 @@ ab -n 10000 -c 100 http://localhost:8080/
 ```
 network/
 ├── CMakeLists.txt          # 构建配置
-├── main_stage1.cpp         # 阶段 1 入口
-├── main_stage2.cpp         # 阶段 2 入口
-├── main_stage3.cpp         # 阶段 3 入口
-├── main_stage4.cpp         # 阶段 4 入口
+├── examples/
+│   ├── main_stage1.cpp     # 阶段 1 入口
+│   ├── main_stage2.cpp     # 阶段 2 入口
+│   ├── main_stage3.cpp     # 阶段 3 入口
+│   └── main_stage4.cpp     # 阶段 4 入口
 ├── src/
 │   ├── Socket.h/.cpp       # RAII socket 封装
 │   ├── Epoll.h/.cpp        # RAII epoll 封装
@@ -158,6 +170,14 @@ network/
 │   └── run.sh              # 一键压测脚本
 └── README.md
 ```
+
+## 教学边界
+
+这个 demo 有意保留了一些简化：
+
+- 只支持基础 HTTP 请求解析，不处理 chunked body、TLS、HTTP pipelining。
+- 连接生命周期由示例代码展示核心思路，没有实现超时管理、优雅关闭和完整 backpressure。
+- 错误处理以学习路径为主，生产环境应接入结构化日志、指标和更严格的返回值检查。
 
 ## 关联知识
 

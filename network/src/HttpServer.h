@@ -10,6 +10,7 @@
 #include "HttpResponse.h"
 
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <unordered_map>
 #include <string>
@@ -29,16 +30,18 @@ public:
 private:
     // 每个连接持有一个 Channel + HTTP 解析上下文 + 响应写缓冲
     struct Connection {
-        Channel* channel;
+        EventLoop* loop;
+        std::unique_ptr<Channel> channel;
         HttpRequest request;
         std::string writeBuf;   // 待发送的响应数据缓存
         size_t writeSent;       // 已发送的字节数
+        bool closing;           // 已进入关闭流程，防止重复关闭
 
         Connection(EventLoop* loop, int fd)
-            : channel(nullptr), writeSent(0) {
-            channel = new Channel(loop, fd);
-        }
-        ~Connection() { delete channel; }
+            : loop(loop),
+              channel(new Channel(loop, fd)),
+              writeSent(0),
+              closing(false) {}
     };
 
     void onNewConnection(int conn_fd, struct sockaddr_in addr);
@@ -54,7 +57,7 @@ private:
     HttpCallback callback_;
 
     std::mutex connectionsMutex_;
-    std::unordered_map<int, Connection*> connections_;
+    std::unordered_map<int, std::unique_ptr<Connection>> connections_;
 };
 
 #endif // HTTPSERVER_H

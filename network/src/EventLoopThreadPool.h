@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstddef>
+#include <memory>
 
 class EventLoop;
 class EventLoopThread;
@@ -21,7 +22,7 @@ private:
     EventLoop* baseLoop_;
     int numThreads_;
     int next_;
-    std::vector<EventLoopThread*> threads_;
+    std::vector<std::unique_ptr<EventLoopThread>> threads_;
     std::vector<EventLoop*> loops_;
 };
 
