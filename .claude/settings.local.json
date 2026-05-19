@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Get-ChildItem D:\\\\cs-system-lab *)"
+      "Bash(Get-ChildItem D:\\\\cs-system-lab *)",
+      "Bash(ssh root@192.168.100.128 \"pkill -f stage3_reactor; rm -f /tmp/stage3.log\")",
+      "Bash(ssh -f root@192.168.100.128 \"nohup /root/cs-system-lab/epoll-http-server/build/stage3_reactor > /tmp/stage3.log 2>&1 &\")",
+      "Bash(ssh *)",
+      "Bash(git add *)"
     ]
   }
 }

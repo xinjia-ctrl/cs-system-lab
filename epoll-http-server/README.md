@@ -148,7 +148,7 @@ ab -n 10000 -c 100 http://localhost:8080/
 ## 项目结构
 
 ```
-network/
+epoll-http-server/
 ├── CMakeLists.txt          # 构建配置
 ├── examples/
 │   ├── main_stage1.cpp     # 阶段 1 入口
